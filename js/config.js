@@ -1,4 +1,4 @@
-const isLocalHost = true;
+const isLocalHost = false;
 
 const config = {
   isLocalHost,
@@ -9,6 +9,9 @@ const config = {
   msPerTick: 200,
 
   worldSize: {width: 900, height: 450},
+
+  startingFighters: 10,
+  startingBombers: 20,
 }
 
 module.exports = {

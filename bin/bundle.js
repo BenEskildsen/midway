@@ -193,7 +193,47 @@ function registerHotkeys(dispatch) {
 }
 module.exports = Game;
 
-},{"../clientToServer":4,"../config":5,"../postVisit":7,"../render":11,"bens_ui_components":79,"react":96}],2:[function(require,module,exports){
+},{"../clientToServer":5,"../config":6,"../postVisit":8,"../render":12,"bens_ui_components":79,"react":96}],2:[function(require,module,exports){
+const React = require('react');
+const {
+  Modal
+} = require('bens_ui_components');
+const {
+  dispatchToServer
+} = require('../clientToServer');
+const {
+  useEffect,
+  useState,
+  useMemo
+} = React;
+const GameOverModal = props => {
+  const {
+    winner
+  } = props;
+  const state = getState(); // HACK this comes from window;
+
+  return /*#__PURE__*/React.createElement(Modal, {
+    title: winner == state.clientID ? 'You Win!' : 'You Lose!',
+    body: winner == state.clientID ? "You sunk the enemy carrier" : "Your carrier was sunk",
+    buttons: [{
+      label: 'Back to Menu',
+      onClick: () => {
+        dispatch({
+          type: 'DISMISS_MODAL'
+        });
+        dispatch({
+          type: 'SET_SCREEN',
+          screen: 'LOBBY'
+        });
+        dispatchToServer({
+          type: 'LEAVE_SESSION'
+        });
+      }
+    }]
+  });
+};
+module.exports = GameOverModal;
+},{"../clientToServer":5,"bens_ui_components":79,"react":96}],3:[function(require,module,exports){
 const React = require('react');
 const {
   Button,
@@ -316,7 +356,7 @@ const SessionCard = props => {
   }));
 };
 module.exports = Lobby;
-},{"../clientToServer":4,"../selectors/sessions":12,"bens_ui_components":79,"react":96}],3:[function(require,module,exports){
+},{"../clientToServer":5,"../selectors/sessions":13,"bens_ui_components":79,"react":96}],4:[function(require,module,exports){
 "use strict";
 
 var _postVisit = _interopRequireDefault(require("../postVisit"));
@@ -371,7 +411,7 @@ function Main(props) {
 }
 module.exports = Main;
 
-},{"../clientToServer":4,"../postVisit":7,"../reducers/rootReducer":10,"./Game.react":1,"./Lobby.react":2,"bens_ui_components":79,"react":96}],4:[function(require,module,exports){
+},{"../clientToServer":5,"../postVisit":8,"../reducers/rootReducer":11,"./Game.react":1,"./Lobby.react":3,"bens_ui_components":79,"react":96}],5:[function(require,module,exports){
 const {
   config
 } = require('./config');
@@ -402,8 +442,8 @@ module.exports = {
   dispatchToServer,
   setupSocket
 };
-},{"./config":5}],5:[function(require,module,exports){
-const isLocalHost = true;
+},{"./config":6}],6:[function(require,module,exports){
+const isLocalHost = false;
 const config = {
   isLocalHost,
   URL: isLocalHost ? null : "https://benhub.io",
@@ -412,12 +452,14 @@ const config = {
   worldSize: {
     width: 900,
     height: 450
-  }
+  },
+  startingFighters: 10,
+  startingBombers: 20
 };
 module.exports = {
   config
 };
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 "use strict";
 
 var _Main = _interopRequireDefault(require("./UI/Main.react"));
@@ -430,7 +472,7 @@ function renderUI(root) {
 const root = _client.default.createRoot(document.getElementById('container'));
 renderUI(root);
 
-},{"./UI/Main.react":3,"react":96,"react-dom/client":92}],7:[function(require,module,exports){
+},{"./UI/Main.react":4,"react":96,"react-dom/client":92}],8:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -453,7 +495,7 @@ const postVisit = (path, map) => {
   const isUnique = !!!localStorage.getItem('isRevisit_' + path);
   localStorage.setItem('isRevisit_' + path, true);
   return axiosInstance.post('/visit', {
-    hostname: 'chess2',
+    hostname: 'midway',
     path,
     isUnique,
     map
@@ -465,7 +507,7 @@ const getHostname = () => {
 var _default = postVisit;
 exports.default = _default;
 
-},{"./config":5,"axios":14}],8:[function(require,module,exports){
+},{"./config":6,"axios":14}],9:[function(require,module,exports){
 // @flow
 
 const {
@@ -591,7 +633,7 @@ const gameReducer = (game, action) => {
 module.exports = {
   gameReducer
 };
-},{"../config":5,"bens_utils":86}],9:[function(require,module,exports){
+},{"../config":6,"bens_utils":86}],10:[function(require,module,exports){
 const modalReducer = (state, action) => {
   switch (action.type) {
     case 'DISMISS_MODAL':
@@ -615,7 +657,7 @@ const modalReducer = (state, action) => {
 module.exports = {
   modalReducer
 };
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 const React = require('react');
 const {
   gameReducer
@@ -623,7 +665,7 @@ const {
 const {
   modalReducer
 } = require('./modalReducer');
-const GameOverModal = require('../ui/GameOverModal.react');
+const GameOverModal = require('../UI/GameOverModal.react');
 const {
   mouseReducer
 } = require('bens_ui_components');
@@ -822,7 +864,7 @@ const initGameState = () => {
 module.exports = {
   rootReducer
 };
-},{"../config":5,"../selectors/sessions":12,"../ui/GameOverModal.react":13,"./gameReducer":8,"./modalReducer":9,"bens_ui_components":79,"bens_utils":86,"react":96}],11:[function(require,module,exports){
+},{"../UI/GameOverModal.react":2,"../config":6,"../selectors/sessions":13,"./gameReducer":9,"./modalReducer":10,"bens_ui_components":79,"bens_utils":86,"react":96}],12:[function(require,module,exports){
 const {
   isHost
 } = require('./selectors/sessions');
@@ -939,7 +981,7 @@ const render = state => {
 module.exports = {
   render
 };
-},{"./selectors/sessions":12,"bens_utils":86}],12:[function(require,module,exports){
+},{"./selectors/sessions":13,"bens_utils":86}],13:[function(require,module,exports){
 const getSession = state => {
   for (const id in state.sessions) {
     const session = state.sessions[id];
@@ -956,47 +998,7 @@ module.exports = {
   getSession,
   isHost
 };
-},{}],13:[function(require,module,exports){
-const React = require('react');
-const {
-  Modal
-} = require('bens_ui_components');
-const {
-  dispatchToServer
-} = require('../clientToServer');
-const {
-  useEffect,
-  useState,
-  useMemo
-} = React;
-const GameOverModal = props => {
-  const {
-    winner
-  } = props;
-  const state = getState(); // HACK this comes from window;
-
-  return /*#__PURE__*/React.createElement(Modal, {
-    title: winner == state.clientID ? 'You Win!' : 'You Lose!',
-    body: winner == state.clientID ? "You sunk the enemy carrier" : "Your carrier was sunk",
-    buttons: [{
-      label: 'Back to Menu',
-      onClick: () => {
-        dispatch({
-          type: 'DISMISS_MODAL'
-        });
-        dispatch({
-          type: 'SET_SCREEN',
-          screen: 'LOBBY'
-        });
-        dispatchToServer({
-          type: 'LEAVE_SESSION'
-        });
-      }
-    }]
-  });
-};
-module.exports = GameOverModal;
-},{"../clientToServer":4,"bens_ui_components":79,"react":96}],14:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -17807,4 +17809,4 @@ exports.clearImmediate = typeof clearImmediate === "function" ? clearImmediate :
   delete immediateIds[id];
 };
 }).call(this)}).call(this,require("timers").setImmediate,require("timers").clearImmediate)
-},{"process/browser.js":89,"timers":100}]},{},[6]);
+},{"process/browser.js":89,"timers":100}]},{},[7]);

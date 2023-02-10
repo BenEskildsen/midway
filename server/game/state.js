@@ -19,8 +19,8 @@ const initGameState = (clientIDs) => {
           x: randomIn(25, game.worldSize.width - 25),
           y: i == 0 ? 40 : game.worldSize.height - 40,
         },
-        10, // num fighters
-        10, // num bombers
+        config.startingFighters, // num fighters
+        config.startingBombers, // num bombers
       );
     game.entities[carrier.id] = carrier;
 

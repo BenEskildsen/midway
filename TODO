@@ -1,4 +1,6 @@
 
+  - handle player leaving in-game
+
   - fighting:
     - remove target if you can't see it
 
