@@ -19,3 +19,4 @@
 
  - update multiplayer template:
     - copy over lobby again
+    - template needs to do the sed command on the config as well
