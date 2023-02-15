@@ -4,14 +4,14 @@ const Game = require('./Game.react');
 const Lobby = require('./Lobby.react');
 const {setupSocket} = require('../clientToServer');
 const {useEnhancedReducer} = require('bens_ui_components');
-const {rootReducer} = require('../reducers/rootReducer');
+const {rootReducer, initState} = require('../reducers/rootReducer');
 import postVisit from '../postVisit';
 const {useEffect, useState, useMemo} = React;
 
 
 function Main(props) {
   const [state, dispatch, getState] = useEnhancedReducer(
-    rootReducer, {screen: 'LOBBY'},
+    rootReducer, initState(),
   );
   window.getState = getState;
   window.dispatch = dispatch;

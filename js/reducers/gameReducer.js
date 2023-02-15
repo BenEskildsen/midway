@@ -1,6 +1,5 @@
 // @flow
 
-const {config} = require('../config');
 const {clamp, subtractWithDeficit} = require('bens_utils').math;
 const {
   randomIn, normalIn, oneOf, weightedOneOf,
@@ -55,51 +54,6 @@ const gameReducer = (game, action) => {
         ...game,
         selectedIDs,
       };
-    }
-
-
-    // NOT USING
-    case 'START_TICK': {
-      if (game != null && game.tickInterval != null) {
-        return game;
-      }
-      game.prevTickTime = new Date().getTime();
-      return {
-        ...game,
-        tickInterval: setInterval(
-          // HACK: store is only available via window
-          () => store.dispatch({type: 'TICK'}),
-          config.msPerTick,
-        ),
-      };
-    }
-    case 'STOP_TICK': {
-      clearInterval(game.tickInterval);
-      game.tickInterval = null;
-
-      return game;
-    }
-    case 'TICK': {
-      game.time += 1;
-
-      return game;
-    }
-
-    case 'LAUNCH_PLANE': {
-      const {plane} = action;
-      game.entities[plane.id] = plane;
-      return game;
-    }
-    case 'SET_TARGET': {
-      const {entityID, targetPos} = action;
-      const entity = game.entities[entityID];
-      if (!entity) break;
-      entity.targetPos = targetPos;
-      return game;
-    }
-    case 'REVEAL_ENTITY': {
-
-      return game;
     }
   }
   return game;

@@ -10,7 +10,6 @@ const {
 const {
   getEntitiesByPlayer, getCarrier, getOtherClientID,
 } = require('./selectors');
-const {config} = require('../../js/config');
 
 
 const gameReducer = (state, action, clientID, socket, dispatch) => {
@@ -22,16 +21,25 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
 
   const game = session.game;
   switch (action.type) {
+    case 'EDIT_SESSION_PARAMS': {
+      delete action.type;
+      for (const property in action) {
+        session.config[property] = action[property];
+      }
+      emitToSession(session, socketClients,
+        {type: 'EDIT_SESSION_PARAMS', ...action}, clientID, true,
+      );
+      break;
+    }
     case 'START': {
       console.log("Start");
-      // const session = sessions[clientToSession[clientID]];
       session.game = {
-        ...initGameState(session.clients),
+        ...initGameState(session.clients, session.config),
         prevTickTime: new Date().getTime(),
         tickInterval: setInterval(
           // HACK: dispatch is only available via dispatch function above
           () => dispatch({type: 'TICK'}),
-          config.msPerTick,
+          session.config.msPerTick,
         ),
       };
 
@@ -44,14 +52,24 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
       }
       break;
     }
+    case 'STOP': {
+      doGameOver(session, socketClients, clientID, null, true);
+      return state;
+    }
     case 'LAUNCH_PLANE': {
       const {planeType, carrierID, targetPos} = action;
       const carrier = game.entities[carrierID];
-      // const carrier = getCarrier(game, clientID);
 
       // check that this plane is launchable
       if (carrier.planes[planeType] <= 0) break;
       carrier.planes[planeType]--;
+
+      // update sorties stat
+      if (planeType == 'FIGHTER') {
+        game.stats[clientID].fighter_sorties++;
+      } else if (planeType == 'BOMBER') {
+        game.stats[clientID].bomber_sorties++;
+      }
 
       const plane = makePlane(clientID, {...carrier.position}, planeType, targetPos);
       game.entities[plane.id] = plane;
@@ -120,19 +138,31 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
               targetEntity.targetEnemy == entityID && Math.random() < 0.5
             ) {
               delete game.entities[entityID];
+              game.stats[entity.clientID].fighters_shot_down++;
+              targetEntity.kills++;
+              if (targetEntity.kills == 5) {
+                game.stats[targetEntity.clientID].fighter_aces++;
+              }
+
               continue;
             }
             if (targetEntity.type == 'CARRIER') {
-              emitToSession(
-                session, socketClients,
-                {type: 'GAME_OVER', winner: entity.clientID},
-                clientID, true, // include self
-              );
-              clearInterval(game.tickInterval);
-              game.tickInterval = null;
+              doGameOver(session, socketClients, entity.clientID, entity.clientID);
               return state;
-            } else {
+            } else if (targetEntity.type == 'FIGHTER') {
               delete game.entities[targetEntity.id];
+              game.stats[targetEntity.clientID].fighters_shot_down++;
+              entity.kills++;
+              if (entity.kills == 5) {
+                game.stats[entity.clientID].fighter_aces++;
+              }
+            } else if (targetEntity.type == 'BOMBER') {
+              delete game.entities[targetEntity.id];
+              game.stats[targetEntity.clientID].bombers_shot_down++;
+              entity.kills++;
+              if (entity.kills == 5) {
+                game.stats[entity.clientID].fighter_aces++;
+              }
             }
           } else {
             entity.targetPos = null; // return to carrier on next tick
@@ -154,6 +184,11 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
         // compute running out of fuel
         if (entity.fuel <= 0) {
           delete game.entities[entity.id];
+          if (entity.type == 'FIGHTER') {
+            game.stats[entity.clientID].fighters_no_fuel++;
+          } else if (entity.type == 'BOMBER') {
+            game.stats[entity.clientID].bombers_no_fuel++;
+          }
         }
       }
 
@@ -195,6 +230,17 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
 
   return state;
 };
+
+const doGameOver = (session, socketClients, clientID, winner, disconnect) => {
+  const game = session.game;
+  emitToSession(
+    session, socketClients,
+    {type: 'GAME_OVER', winner, disconnect, stats: game.stats},
+    clientID, true, // include self
+  );
+  clearInterval(game.tickInterval);
+  game.tickInterval = null;
+}
 
 
 module.exports = {gameReducer};

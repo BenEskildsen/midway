@@ -57,11 +57,17 @@ const rootReducer = (state, action) => {
       return {...state};
     }
 
-
+    case 'EDIT_SESSION_PARAMS': {
+      delete action.type;
+      for (const property in action) {
+        state.config[property] = action[property];
+      }
+      return {...state};
+    }
     case 'START': {
       const {entities} = action;
       const game = {
-        ...initGameState(),
+        ...initGameState(state.config),
         clientID: state.clientID,
         entities,
         // prevTickTime = new Date().getTime();
@@ -82,7 +88,7 @@ const rootReducer = (state, action) => {
 
       return {
         ...state,
-        modal: <GameOverModal winner={winner} />
+        modal: <GameOverModal {...action} />
       };
     }
     case 'SET_SCREEN': {
@@ -125,10 +131,11 @@ const initState = () => {
     game: null,
     modal: null,
     sessions: {},
+    config: deepCopy(config),
   };
 }
 
-const initGameState = () => {
+const initGameState = (config) => {
   const game = {
     worldSize: {...config.worldSize},
     entities: {},
@@ -141,4 +148,4 @@ const initGameState = () => {
   return game;
 }
 
-module.exports = {rootReducer};
+module.exports = {rootReducer, initState};

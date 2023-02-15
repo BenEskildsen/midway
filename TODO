@@ -1,5 +1,8 @@
 
-  - handle player leaving in-game
+  - undiscovered territory?
+  - no line for carrier (unless selected?)
+    - or reduce opacity
+
 
   - fighting:
     - remove target if you can't see it
@@ -11,7 +14,6 @@
     - carriers can fight back against planes
     - planes have to refit before they can launch again
     - islands that block carrier vision and movement
-    - slider for fighters vs bombers on lobby
 
 
   - quality of life:
@@ -19,6 +21,9 @@
     - allow mousing outside the canvas
 
 
- - update multiplayer template:
+  - update multiplayer template:
+    - something is broken about postVisit (not detecting unique)
     - copy over lobby again
-    - template needs to do the sed command on the config as well
+    - copy over server/sessions.js and socket.js
+    - wrap server stuff in try/catch
+    - template needs to do the sed command on the config and postVisit as well

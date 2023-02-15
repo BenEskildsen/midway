@@ -6,7 +6,6 @@ const {
   Modal, Indicator,
   useMouseHandler,
 } = require('bens_ui_components');
-const {config} = require('../config');
 const {dispatchToServer} = require('../clientToServer');
 import postVisit from '../postVisit';
 const {render} = require('../render');

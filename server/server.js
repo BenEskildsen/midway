@@ -2,9 +2,11 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const {deepCopy} = require('bens_utils').helpers;
 const {initSocketServer} = require('./socket');
 const {gameReducer} = require('./game/gameReducer');
 const {initGameState} = require('./game/state');
+const {config} = require('../js/config');
 
 const port = process.env.PORT || 8000;
 
@@ -22,6 +24,7 @@ const newSession = (clientID) => {
     id,
     name: "Game #" + id,
     clients: [clientID],
+    config: deepCopy(config),
     game: null,
   };
 }

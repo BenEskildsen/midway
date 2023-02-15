@@ -52,9 +52,8 @@ const initIO = (io, newSession, gameReducer) => {
     // tell the client what sessions exist
     socket.emit('receiveAction', {sessions});
 
+    // needed for ticking
     function dispatch(action) {
-      let sessionID = clientToSession[clientID];
-      // sessions[sessionID] =
       gameReducer(state, action, clientID, socket, dispatch);
     }
 
@@ -75,7 +74,8 @@ const initIO = (io, newSession, gameReducer) => {
     });
 
     socket.on('disconnect', () => {
-      console.log("user disconnected");
+      console.log(`client ${clientID} disconnected`);
+      dispatch({type: 'STOP'});
       leaveSession(state, clientID);
     });
   });

@@ -17,9 +17,6 @@ const {
   useMouseHandler
 } = require('bens_ui_components');
 const {
-  config
-} = require('../config');
-const {
   dispatchToServer
 } = require('../clientToServer');
 const {
@@ -193,7 +190,7 @@ function registerHotkeys(dispatch) {
 }
 module.exports = Game;
 
-},{"../clientToServer":5,"../config":6,"../postVisit":8,"../render":12,"bens_ui_components":79,"react":96}],2:[function(require,module,exports){
+},{"../clientToServer":5,"../postVisit":8,"../render":12,"bens_ui_components":79,"react":96}],2:[function(require,module,exports){
 const React = require('react');
 const {
   Modal
@@ -208,13 +205,46 @@ const {
 } = React;
 const GameOverModal = props => {
   const {
-    winner
+    winner,
+    disconnect,
+    stats
   } = props;
   const state = getState(); // HACK this comes from window;
 
+  let title = winner == state.clientID ? 'You Win!' : 'You Lose!';
+  let body = winner == state.clientID ? "You sunk the enemy carrier" : "Your carrier was sunk";
+  if (disconnect) {
+    title = "Opponent Disconnected";
+    body = "The other player has closed the tab and disconnected. So I guess you win by forfeit...";
+  }
+  let otherClientID = null;
+  for (const id in stats) {
+    if (id != state.clientID) otherClientID = id;
+  }
+  body = /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", null, body), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: 'flex',
+      flexDirection: 'row',
+      gap: 70
+    }
+  }, /*#__PURE__*/React.createElement(PlayerStats, {
+    clientID: state.clientID,
+    otherID: otherClientID,
+    isYou: true,
+    stats: stats
+  }), /*#__PURE__*/React.createElement(PlayerStats, {
+    clientID: otherClientID,
+    otherID: state.clientID,
+    isYou: false,
+    stats: stats
+  })));
   return /*#__PURE__*/React.createElement(Modal, {
-    title: winner == state.clientID ? 'You Win!' : 'You Lose!',
-    body: winner == state.clientID ? "You sunk the enemy carrier" : "Your carrier was sunk",
+    title: title,
+    body: body,
+    style: {
+      padding: 15,
+      width: 650
+    },
     buttons: [{
       label: 'Back to Menu',
       onClick: () => {
@@ -232,6 +262,17 @@ const GameOverModal = props => {
     }]
   });
 };
+const PlayerStats = props => {
+  const {
+    isYou,
+    stats,
+    otherID,
+    clientID
+  } = props;
+  return /*#__PURE__*/React.createElement("div", {
+    style: {}
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, isYou ? 'You' : 'Opponent')), /*#__PURE__*/React.createElement("div", null, "Fighter sorties flown: ", stats[clientID].fighter_sorties), /*#__PURE__*/React.createElement("div", null, "Bomber sorties flown: ", stats[clientID].bomber_sorties), /*#__PURE__*/React.createElement("div", null, "Enemy fighters shot down: ", stats[otherID].fighters_shot_down), /*#__PURE__*/React.createElement("div", null, "Enemy bombers shot down: ", stats[otherID].bombers_shot_down), /*#__PURE__*/React.createElement("div", null, "Fighter aces: ", stats[clientID].fighter_aces), /*#__PURE__*/React.createElement("div", null, "Fighters lost to no fuel: ", stats[clientID].fighters_no_fuel), /*#__PURE__*/React.createElement("div", null, "Bombers lost to no fuel: ", stats[clientID].bombers_no_fuel));
+};
 module.exports = GameOverModal;
 },{"../clientToServer":5,"bens_ui_components":79,"react":96}],3:[function(require,module,exports){
 const React = require('react');
@@ -246,6 +287,8 @@ const {
   Board,
   SpriteSheet,
   TextField,
+  Slider,
+  Checkbox,
   CheckerBackground
 } = require('bens_ui_components');
 const {
@@ -311,7 +354,8 @@ const CreateGameCard = props => {
 const SessionCard = props => {
   const {
     session,
-    joinedSessionID
+    joinedSessionID,
+    state
   } = props;
   const {
     id,
@@ -326,7 +370,7 @@ const SessionCard = props => {
     style: {
       textAlign: 'center'
     }
-  }, /*#__PURE__*/React.createElement("b", null, name)), "Players: ", clients.length, joinedSessionID == id ? /*#__PURE__*/React.createElement(Button, {
+  }, /*#__PURE__*/React.createElement("b", null, name)), "Players: ", clients.length, joinedSessionID == id ? /*#__PURE__*/React.createElement(Settings, props) : null, joinedSessionID == id ? /*#__PURE__*/React.createElement(Button, {
     style: {
       width: 300,
       height: 30
@@ -355,6 +399,127 @@ const SessionCard = props => {
     }
   }));
 };
+const Settings = props => {
+  const {
+    session,
+    joinedSessionID,
+    state
+  } = props;
+  let deployment = /*#__PURE__*/React.createElement("div", null, "Starting Fighters:", /*#__PURE__*/React.createElement(Slider, {
+    value: state.config.startingFighters,
+    min: 1,
+    max: 100,
+    onChange: startingFighters => {
+      dispatch({
+        type: 'EDIT_SESSION_PARAMS',
+        startingFighters
+      });
+      dispatchToServer({
+        type: 'EDIT_SESSION_PARAMS',
+        startingFighters
+      });
+    }
+  }), /*#__PURE__*/React.createElement("div", null), "Starting Bombers:", /*#__PURE__*/React.createElement(Slider, {
+    value: state.config.startingBombers,
+    min: 1,
+    max: 100,
+    onChange: startingBombers => {
+      dispatch({
+        type: 'EDIT_SESSION_PARAMS',
+        startingBombers
+      });
+      dispatchToServer({
+        type: 'EDIT_SESSION_PARAMS',
+        startingBombers
+      });
+    }
+  }));
+  if (state.config.isRandomDeployment) {
+    deployment = /*#__PURE__*/React.createElement("div", null, "Total Starting Planes:", /*#__PURE__*/React.createElement(Slider, {
+      value: state.config.totalNumPlanes,
+      min: 10,
+      max: 200,
+      onChange: totalNumPlanes => {
+        dispatch({
+          type: 'EDIT_SESSION_PARAMS',
+          totalNumPlanes
+        });
+        dispatchToServer({
+          type: 'EDIT_SESSION_PARAMS',
+          totalNumPlanes
+        });
+      }
+    }));
+  }
+  return /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, "Settings:")), "Game ms per tick:", /*#__PURE__*/React.createElement(Slider, {
+    value: state.config.msPerTick,
+    min: 1,
+    max: 1000,
+    onChange: msPerTick => {
+      dispatch({
+        type: 'EDIT_SESSION_PARAMS',
+        msPerTick
+      });
+      dispatchToServer({
+        type: 'EDIT_SESSION_PARAMS',
+        msPerTick
+      });
+    }
+  }), /*#__PURE__*/React.createElement("div", null), "Map Width:", /*#__PURE__*/React.createElement(Slider, {
+    value: state.config.worldSize.width,
+    min: 100,
+    max: 1500,
+    onChange: width => {
+      dispatch({
+        type: 'EDIT_SESSION_PARAMS',
+        worldSize: {
+          ...state.config.worldSize,
+          width
+        }
+      });
+      dispatchToServer({
+        type: 'EDIT_SESSION_PARAMS',
+        worldSize: {
+          ...state.config.worldSize,
+          width
+        }
+      });
+    }
+  }), /*#__PURE__*/React.createElement("div", null), "Map Height:", /*#__PURE__*/React.createElement(Slider, {
+    value: state.config.worldSize.height,
+    min: 100,
+    max: 800,
+    onChange: height => {
+      dispatch({
+        type: 'EDIT_SESSION_PARAMS',
+        worldSize: {
+          ...state.config.worldSize,
+          height
+        }
+      });
+      dispatchToServer({
+        type: 'EDIT_SESSION_PARAMS',
+        worldSize: {
+          ...state.config.worldSize,
+          height
+        }
+      });
+    }
+  }), /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement(Checkbox, {
+    checked: state.config.isRandomDeployment,
+    label: "Randomize Fighter/Bomber Deployment",
+    onChange: isRandomDeployment => {
+      dispatch({
+        type: 'EDIT_SESSION_PARAMS',
+        isRandomDeployment
+      });
+      dispatchToServer({
+        type: 'EDIT_SESSION_PARAMS',
+        isRandomDeployment
+      });
+    }
+  }), deployment);
+};
 module.exports = Lobby;
 },{"../clientToServer":5,"../selectors/sessions":13,"bens_ui_components":79,"react":96}],4:[function(require,module,exports){
 "use strict";
@@ -376,7 +541,8 @@ const {
   useEnhancedReducer
 } = require('bens_ui_components');
 const {
-  rootReducer
+  rootReducer,
+  initState
 } = require('../reducers/rootReducer');
 const {
   useEffect,
@@ -384,9 +550,7 @@ const {
   useMemo
 } = React;
 function Main(props) {
-  const [state, dispatch, getState] = useEnhancedReducer(rootReducer, {
-    screen: 'LOBBY'
-  });
+  const [state, dispatch, getState] = useEnhancedReducer(rootReducer, initState());
   window.getState = getState;
   window.dispatch = dispatch;
   useEffect(() => {
@@ -443,7 +607,7 @@ module.exports = {
   setupSocket
 };
 },{"./config":6}],6:[function(require,module,exports){
-const isLocalHost = false;
+const isLocalHost = true;
 const config = {
   isLocalHost,
   URL: isLocalHost ? null : "https://benhub.io",
@@ -453,6 +617,10 @@ const config = {
     width: 900,
     height: 450
   },
+  // for random:
+  isRandomDeployment: false,
+  totalNumPlanes: 30,
+  // for non-random:
   startingFighters: 10,
   startingBombers: 20
 };
@@ -510,9 +678,6 @@ exports.default = _default;
 },{"./config":6,"axios":14}],9:[function(require,module,exports){
 // @flow
 
-const {
-  config
-} = require('../config');
 const {
   clamp,
   subtractWithDeficit
@@ -576,64 +741,13 @@ const gameReducer = (game, action) => {
           selectedIDs
         };
       }
-
-    // NOT USING
-    case 'START_TICK':
-      {
-        if (game != null && game.tickInterval != null) {
-          return game;
-        }
-        game.prevTickTime = new Date().getTime();
-        return {
-          ...game,
-          tickInterval: setInterval(
-          // HACK: store is only available via window
-          () => store.dispatch({
-            type: 'TICK'
-          }), config.msPerTick)
-        };
-      }
-    case 'STOP_TICK':
-      {
-        clearInterval(game.tickInterval);
-        game.tickInterval = null;
-        return game;
-      }
-    case 'TICK':
-      {
-        game.time += 1;
-        return game;
-      }
-    case 'LAUNCH_PLANE':
-      {
-        const {
-          plane
-        } = action;
-        game.entities[plane.id] = plane;
-        return game;
-      }
-    case 'SET_TARGET':
-      {
-        const {
-          entityID,
-          targetPos
-        } = action;
-        const entity = game.entities[entityID];
-        if (!entity) break;
-        entity.targetPos = targetPos;
-        return game;
-      }
-    case 'REVEAL_ENTITY':
-      {
-        return game;
-      }
   }
   return game;
 };
 module.exports = {
   gameReducer
 };
-},{"../config":6,"bens_utils":86}],10:[function(require,module,exports){
+},{"bens_utils":86}],10:[function(require,module,exports){
 const modalReducer = (state, action) => {
   switch (action.type) {
     case 'DISMISS_MODAL':
@@ -766,13 +880,23 @@ const rootReducer = (state, action) => {
           ...state
         };
       }
+    case 'EDIT_SESSION_PARAMS':
+      {
+        delete action.type;
+        for (const property in action) {
+          state.config[property] = action[property];
+        }
+        return {
+          ...state
+        };
+      }
     case 'START':
       {
         const {
           entities
         } = action;
         const game = {
-          ...initGameState(),
+          ...initGameState(state.config),
           clientID: state.clientID,
           entities
           // prevTickTime = new Date().getTime();
@@ -796,9 +920,7 @@ const rootReducer = (state, action) => {
         } = action;
         return {
           ...state,
-          modal: /*#__PURE__*/React.createElement(GameOverModal, {
-            winner: winner
-          })
+          modal: /*#__PURE__*/React.createElement(GameOverModal, action)
         };
       }
     case 'SET_SCREEN':
@@ -845,10 +967,11 @@ const initState = () => {
     screen: 'LOBBY',
     game: null,
     modal: null,
-    sessions: {}
+    sessions: {},
+    config: deepCopy(config)
   };
 };
-const initGameState = () => {
+const initGameState = config => {
   const game = {
     worldSize: {
       ...config.worldSize
@@ -862,7 +985,8 @@ const initGameState = () => {
   return game;
 };
 module.exports = {
-  rootReducer
+  rootReducer,
+  initState
 };
 },{"../UI/GameOverModal.react":2,"../config":6,"../selectors/sessions":13,"./gameReducer":9,"./modalReducer":10,"bens_ui_components":79,"bens_utils":86,"react":96}],12:[function(require,module,exports){
 const {

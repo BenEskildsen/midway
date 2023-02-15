@@ -7,6 +7,22 @@ const leaveSession = (state, clientID) => {
   emitToAllClients(socketClients,
     {type: 'UPDATE_SESSION', session}, clientID, true /* includeSelf */
   );
+  if (session.clients.length == 0) {
+    endSession(state, clientID, session.id);
+  }
+}
+
+const endSession = (state, clientID, sessionID) => {
+  const {sessions, socketClients, clientToSession} = state;
+  delete sessions[sessionID];
+  for (const id in clientToSession) {
+    if (clientToSession[id] == sessionID) {
+      delete clientToSession[id];
+    }
+  }
+  emitToAllClients(socketClients,
+    {type: 'END_SESSION', sessionID}, clientID, true /* include self */
+  );
 }
 
 const emitToAllClients = (
@@ -57,32 +73,19 @@ const sessionReducer = (state, action, clientID, socket, newSession) => {
 
       // tell the rest of the clients this one joined the session
       emitToAllClients(socketClients, {...action, clientID}, clientID, true);
+
+      // tell the client that just joined what the settings are:
+      socket.emit('receiveAction', {type: 'EDIT_SESSION_PARAMS', ...session.config});
       break;
     }
     case 'LEAVE_SESSION': {
       const session = sessions[clientToSession[clientID]];
       leaveSession(state, clientID);
-      if (session.clients.length == 0) {
-        const sessionID = session.id;
-        delete sessions[sessionID];
-        for (const id in clientToSession) {
-          if (clientToSession[id] == sessionID) {
-            delete clientToSession[id];
-          }
-        }
-        emitToAllClients(socketClients, {type: 'END_SESSION', sessionID}, clientID, true /* include self */);
-      }
       break;
     }
     case 'END_SESSION': {
       const {sessionID} = action;
-      delete sessions[sessionID];
-      for (const id in clientToSession) {
-        if (clientToSession[id] == sessionID) {
-          delete clientToSession[id];
-        }
-      }
-      emitToAllClients(socketClients, action, clientID, true /* include self */);
+      endSession(state, clientID, sessionID);
       break;
     }
   }
@@ -93,5 +96,5 @@ const sessionReducer = (state, action, clientID, socket, newSession) => {
 
 module.exports = {
   leaveSession, emitToAllClients, emitToSession,
-  sessionReducer,
+  sessionReducer, endSession,
 }

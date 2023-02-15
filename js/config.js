@@ -1,4 +1,4 @@
-const isLocalHost = false;
+const isLocalHost = true;
 
 const config = {
   isLocalHost,
@@ -10,6 +10,11 @@ const config = {
 
   worldSize: {width: 900, height: 450},
 
+  // for random:
+  isRandomDeployment: false,
+  totalNumPlanes: 30,
+
+  // for non-random:
   startingFighters: 10,
   startingBombers: 20,
 }
