@@ -271,7 +271,7 @@ const PlayerStats = props => {
   } = props;
   return /*#__PURE__*/React.createElement("div", {
     style: {}
-  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, isYou ? 'You' : 'Opponent')), /*#__PURE__*/React.createElement("div", null, "Fighter sorties flown: ", stats[clientID].fighter_sorties), /*#__PURE__*/React.createElement("div", null, "Bomber sorties flown: ", stats[clientID].bomber_sorties), /*#__PURE__*/React.createElement("div", null, "Enemy fighters shot down: ", stats[otherID].fighters_shot_down), /*#__PURE__*/React.createElement("div", null, "Enemy bombers shot down: ", stats[otherID].bombers_shot_down), /*#__PURE__*/React.createElement("div", null, "Fighter aces: ", stats[clientID].fighter_aces), /*#__PURE__*/React.createElement("div", null, "Fighters lost to no fuel: ", stats[clientID].fighters_no_fuel), /*#__PURE__*/React.createElement("div", null, "Bombers lost to no fuel: ", stats[clientID].bombers_no_fuel));
+  }, /*#__PURE__*/React.createElement("div", null, /*#__PURE__*/React.createElement("b", null, isYou ? 'You' : 'Opponent')), /*#__PURE__*/React.createElement("div", null, "Fighter sorties flown: ", stats[clientID].fighter_sorties), /*#__PURE__*/React.createElement("div", null, "Bomber sorties flown: ", stats[clientID].bomber_sorties), /*#__PURE__*/React.createElement("div", null, "Enemy fighters shot down: ", stats[otherID].fighters_shot_down), /*#__PURE__*/React.createElement("div", null, "Enemy bombers shot down: ", stats[otherID].bombers_shot_down), /*#__PURE__*/React.createElement("div", null, "Fighter aces: ", stats[clientID].fighter_aces), /*#__PURE__*/React.createElement("div", null, "Fighters lost to no fuel: ", stats[clientID].fighters_no_fuel), /*#__PURE__*/React.createElement("div", null, "Bombers lost to no fuel: ", stats[clientID].bombers_no_fuel), /*#__PURE__*/React.createElement("div", null, "Enemy ships sunk: ", stats[otherID].ships_sunk));
 };
 module.exports = GameOverModal;
 },{"../clientToServer":5,"bens_ui_components":79,"react":96}],3:[function(require,module,exports){
@@ -505,6 +505,20 @@ const Settings = props => {
         }
       });
     }
+  }), /*#__PURE__*/React.createElement("div", null), "Carriers per player:", /*#__PURE__*/React.createElement(Slider, {
+    value: state.config.numCarriers,
+    min: 1,
+    max: 5,
+    onChange: numCarriers => {
+      dispatch({
+        type: 'EDIT_SESSION_PARAMS',
+        numCarriers
+      });
+      dispatchToServer({
+        type: 'EDIT_SESSION_PARAMS',
+        numCarriers
+      });
+    }
   }), /*#__PURE__*/React.createElement("div", null), /*#__PURE__*/React.createElement(Checkbox, {
     checked: state.config.isRandomDeployment,
     label: "Randomize Fighter/Bomber Deployment",
@@ -622,7 +636,8 @@ const config = {
   totalNumPlanes: 30,
   // for non-random:
   startingFighters: 10,
-  startingBombers: 20
+  startingBombers: 20,
+  numCarriers: 1
 };
 module.exports = {
   config
@@ -683,6 +698,10 @@ const {
   subtractWithDeficit
 } = require('bens_utils').math;
 const {
+  equals,
+  round
+} = require('bens_utils').vectors;
+const {
   randomIn,
   normalIn,
   oneOf,
@@ -713,12 +732,36 @@ const gameReducer = (game, action) => {
           }
           if (included) selectedIDs.push(id);
         }
+        // turn previous entities into fogLocations
+        const positions = [];
+        for (const entityID in game.entities) {
+          const entity = game.entities[entityID];
+          if (entity.clientID != game.clientID) continue;
+          positions.push({
+            position: round(entity.position),
+            vision: entity.vision
+          });
+        }
+        for (const loc of positions) {
+          let shouldAdd = true;
+          for (const fogLoc of game.fogLocations) {
+            if (equals(loc.position, fogLoc.position) && loc.vision <= fogLoc.vision) {
+              shouldAdd = false;
+              break;
+            }
+          }
+          if (shouldAdd) {
+            game.fogLocations.push(loc);
+          }
+        }
         return {
           ...game,
           selectedIDs,
           entities: action.entities
+          // fogLocations: [...game.fogLocations],
         };
       }
+
     case 'SELECT_ENTITIES':
       {
         const {
@@ -896,7 +939,7 @@ const rootReducer = (state, action) => {
           entities
         } = action;
         const game = {
-          ...initGameState(state.config),
+          ...initGameState(state.config, state.clientID),
           clientID: state.clientID,
           entities
           // prevTickTime = new Date().getTime();
@@ -971,14 +1014,16 @@ const initState = () => {
     config: deepCopy(config)
   };
 };
-const initGameState = config => {
+const initGameState = (config, clientID) => {
   const game = {
     worldSize: {
       ...config.worldSize
     },
     entities: {},
+    fogLocations: [],
     selectedIDs: [],
     marquee: null,
+    clientID,
     clickMode: 'MOVE',
     launchType: 'FIGHTER'
   };
@@ -1001,10 +1046,17 @@ const render = state => {
   const canvas = document.getElementById('canvas');
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
-  ctx.fillStyle = "steelblue";
+  ctx.fillStyle = "black";
   ctx.fillRect(0, 0, game.worldSize.width, game.worldSize.height);
 
   // fog
+  for (const loc of game.fogLocations) {
+    ctx.fillStyle = "steelblue";
+    ctx.beginPath();
+    ctx.arc(loc.position.x, loc.position.y, loc.vision, 0, 2 * Math.PI);
+    ctx.closePath();
+    ctx.fill();
+  }
   ctx.fillStyle = 'rgba(100,100,100, 0.75)';
   ctx.fillRect(0, 0, game.worldSize.width, game.worldSize.height);
   for (const entityID in game.entities) {
@@ -1073,7 +1125,9 @@ const render = state => {
             ctx.closePath();
             ctx.stroke();
           }
-        } else if (entity.targetPos != null && entity.clientID == state.clientID) {
+        } else if (entity.targetPos != null && entity.clientID == state.clientID
+        // && game.selectedIDs.includes(entityID)
+        ) {
           ctx.strokeStyle = "white";
           ctx.lineWidth = 1;
           ctx.beginPath();

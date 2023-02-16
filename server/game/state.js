@@ -19,16 +19,18 @@ const initGameState = (clientIDs, config) => {
 
   let i = 0;
   for (const clientID of clientIDs) {
-    const carrier =
-      makeCarrier(
-        clientID,
-        {
-          x: randomIn(40, game.worldSize.width - 40),
-          y: i == 0 ? 40 : game.worldSize.height - 40,
-        },
-        startingFighters, startingBombers,
-      );
-    game.entities[carrier.id] = carrier;
+    for (let j = 0; j < config.numCarriers; j++) {
+      const carrier =
+        makeCarrier(
+          clientID,
+          {
+            x: randomIn(40, game.worldSize.width - 40),
+            y: i == 0 ? 40 : game.worldSize.height - 40,
+          },
+          startingFighters, startingBombers,
+        );
+      game.entities[carrier.id] = carrier;
+    }
 
     game.stats[clientID] = {
       'fighters_shot_down': 0,
@@ -38,6 +40,7 @@ const initGameState = (clientIDs, config) => {
       'fighter_sorties': 0,
       'bomber_sorties': 0,
       'fighter_aces': 0,
+      'ships_sunk': 0,
     },
     i++;
   }

@@ -8,10 +8,17 @@ const render = (state) => {
   if (!canvas) return;
   const ctx = canvas.getContext("2d");
 
-  ctx.fillStyle = "steelblue";
+  ctx.fillStyle = "black";
   ctx.fillRect(0, 0, game.worldSize.width, game.worldSize.height);
 
   // fog
+  for (const loc of game.fogLocations) {
+    ctx.fillStyle = "steelblue";
+    ctx.beginPath();
+    ctx.arc(loc.position.x, loc.position.y, loc.vision, 0, 2*Math.PI);
+    ctx.closePath();
+    ctx.fill();
+  }
   ctx.fillStyle = 'rgba(100,100,100, 0.75)';
   ctx.fillRect(0, 0, game.worldSize.width, game.worldSize.height);
   for (const entityID in game.entities) {
@@ -87,7 +94,11 @@ const render = (state) => {
             ctx.closePath();
             ctx.stroke();
           }
-        } else if (entity.targetPos != null && entity.clientID == state.clientID) {
+        } else if (
+          entity.targetPos != null &&
+          entity.clientID == state.clientID
+          // && game.selectedIDs.includes(entityID)
+        ) {
           ctx.strokeStyle = "white";
           ctx.lineWidth = 1;
           ctx.beginPath();

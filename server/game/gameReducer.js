@@ -8,7 +8,8 @@ const {
   makeVector, vectorTheta, subtract, add, dist, equals,
 } = require('bens_utils').vectors;
 const {
-  getEntitiesByPlayer, getCarrier, getOtherClientID,
+  getEntitiesByPlayer, getNearestCarrier, getOtherClientID,
+  getNumCarriers,
 } = require('./selectors');
 
 
@@ -118,7 +119,7 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
         if (targetPos == null) {
           // planes without target go back to ship
           if (entity.isPlane) {
-            targetPos = {...getCarrier(game, entity.clientID).position};
+            targetPos = {...getNearestCarrier(game, entity).position};
           }
         }
 
@@ -129,7 +130,7 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
           } else if (entity.targetPos == null) {
             // we've arrived at home carrier
             delete game.entities[entity.id];
-            getCarrier(game, entity.clientID).planes[entity.type]++;
+            getNearestCarrier(game, entity).planes[entity.type]++;
           } else if (isEnemy) {
             // kill the enemy
             const targetEntity = game.entities[entity.targetEnemy];
@@ -147,8 +148,12 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
               continue;
             }
             if (targetEntity.type == 'CARRIER') {
-              doGameOver(session, socketClients, entity.clientID, entity.clientID);
-              return state;
+              delete game.entities[targetEntity.id];
+              game.stats[targetEntity.clientID].ships_sunk++;
+              if (getNumCarriers(game, targetEntity.clientID) == 0) {
+                doGameOver(session, socketClients, entity.clientID, entity.clientID);
+                return state;
+              }
             } else if (targetEntity.type == 'FIGHTER') {
               delete game.entities[targetEntity.id];
               game.stats[targetEntity.clientID].fighters_shot_down++;
@@ -233,6 +238,7 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
 
 const doGameOver = (session, socketClients, clientID, winner, disconnect) => {
   const game = session.game;
+  if (!game) return;
   emitToSession(
     session, socketClients,
     {type: 'GAME_OVER', winner, disconnect, stats: game.stats},

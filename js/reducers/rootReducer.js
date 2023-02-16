@@ -67,7 +67,7 @@ const rootReducer = (state, action) => {
     case 'START': {
       const {entities} = action;
       const game = {
-        ...initGameState(state.config),
+        ...initGameState(state.config, state.clientID),
         clientID: state.clientID,
         entities,
         // prevTickTime = new Date().getTime();
@@ -135,12 +135,14 @@ const initState = () => {
   };
 }
 
-const initGameState = (config) => {
+const initGameState = (config, clientID) => {
   const game = {
     worldSize: {...config.worldSize},
     entities: {},
+    fogLocations: [],
     selectedIDs: [],
     marquee: null,
+    clientID,
     clickMode: 'MOVE',
     launchType: 'FIGHTER',
   };

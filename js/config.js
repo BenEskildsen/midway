@@ -17,6 +17,8 @@ const config = {
   // for non-random:
   startingFighters: 10,
   startingBombers: 20,
+
+  numCarriers: 1,
 }
 
 module.exports = {

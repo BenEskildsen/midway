@@ -175,6 +175,14 @@ const Settings = (props) => {
         }}
       />
       <div></div>
+      Carriers per player:
+      <Slider value={state.config.numCarriers} min={1} max={5}
+        onChange={(numCarriers) => {
+          dispatch({type: 'EDIT_SESSION_PARAMS', numCarriers});
+          dispatchToServer({type: 'EDIT_SESSION_PARAMS', numCarriers});
+        }}
+      />
+      <div></div>
       <Checkbox
         checked={state.config.isRandomDeployment}
         label="Randomize Fighter/Bomber Deployment"

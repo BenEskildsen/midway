@@ -1,16 +1,10 @@
 
-  - undiscovered territory?
-  - no line for carrier (unless selected?)
-    - or reduce opacity
-
-
   - fighting:
     - remove target if you can't see it
 
 
   - additional features:
     - loss condition for planes lost as well
-    - 2 carriers
     - carriers can fight back against planes
     - planes have to refit before they can launch again
     - islands that block carrier vision and movement
