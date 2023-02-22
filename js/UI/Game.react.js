@@ -5,12 +5,20 @@ const {
   Canvas, RadioPicker,
   Modal, Indicator,
   useMouseHandler,
+  useHotKeyHandler,
+  useEnhancedReducer,
 } = require('bens_ui_components');
 const {dispatchToServer} = require('../clientToServer');
 import postVisit from '../postVisit';
 const {render} = require('../render');
 const {useState, useMemo, useEffect, useReducer} = React;
 
+const normalizePos = (pos, worldSize, canvasSize) => {
+  return {
+    x: pos.x * worldSize.width / canvasSize.width,
+    y: pos.y * worldSize.height / canvasSize.height,
+  };
+}
 
 function Game(props) {
   const {state, dispatch, getState} = props;
@@ -30,17 +38,20 @@ function Game(props) {
   useMouseHandler(
     "canvas", {dispatch, getState},
     {
-      leftDown: (state, dispatch, pos) => {
+      leftDown: (state, dispatch, p) => {
+        const pos = normalizePos(p, state.game.worldSize, state.game.canvasSize);
         dispatch({type: 'SET', marquee: {...pos, width: 0, height: 0}});
       },
-      mouseMove: (state, dispatch, pos) => {
+      mouseMove: (state, dispatch, p) => {
+        const pos = normalizePos(p, state.game.worldSize, state.game.canvasSize);
         if (!state?.mouse?.isLeftDown) return;
         dispatch({type: 'SET', marquee: {...state.game.marquee,
           width: pos.x - state.game.marquee.x,
           height: pos.y - state.game.marquee.y,
         }});
       },
-      leftUp: (state, dispatch, pos) => {
+      leftUp: (state, dispatch, p) => {
+        const pos = normalizePos(p, state.game.worldSize, state.game.canvasSize);
         let square = {...state.game.marquee};
         if (square.width < 0) {
           square.x += square.width;
@@ -53,7 +64,8 @@ function Game(props) {
         dispatch({type: 'SELECT_ENTITIES', square});
         dispatch({type: 'SET', marquee: null});
       },
-      rightDown: (state, dispatch, pos) => {
+      rightDown: (state, dispatch, p) => {
+        const pos = normalizePos(p, state.game.worldSize, state.game.canvasSize);
         for (const entityID of state.game.selectedIDs) {
           const entity = state.game.entities[entityID];
           if (entity.type == 'CARRIER' && state.game.clickMode == 'LAUNCH') {
@@ -68,6 +80,29 @@ function Game(props) {
       },
     },
   );
+
+  // hotKeys
+  useHotKeyHandler({dispatch, getState: () => getState().game.hotKeys});
+  useEffect(() => {
+    dispatch({type: 'SET_HOTKEY', key: 'F', press: 'onKeyDown',
+      fn: () => {
+        dispatch({type: 'SET', launchType: 'FIGHTER'});
+        dispatch({type: 'SET', clickMode: 'LAUNCH'});
+      }
+    });
+    dispatch({type: 'SET_HOTKEY', key: 'B', press: 'onKeyDown',
+      fn: () => {
+        dispatch({type: 'SET', launchType: 'BOMBER'});
+        dispatch({type: 'SET', clickMode: 'LAUNCH'});
+      }
+    });
+    dispatch({type: 'SET_HOTKEY', key: 'M', press: 'onKeyDown',
+      fn: () => {
+        dispatch({type: 'SET', clickMode: 'MOVE'});
+      }
+    });
+  }, []);
+
 
   // selectionCard
   let selectionCard = null;
@@ -131,6 +166,7 @@ function Game(props) {
           padding: 8,
           margin: 4,
           minWidth: 150,
+          backgroundColor: 'white',
         }}
       >
         {selectionContent}
@@ -150,25 +186,20 @@ function Game(props) {
       }}
     >
       <Canvas
-        width={game.worldSize.width}
-        height={game.worldSize.height}
+        view={game.worldSize}
+        useFullScreen={true}
+        onResize={(width, height) => {
+          dispatch({type: 'SET', canvasSize: {width, height}});
+        }}
+        // width={window.innerWidth * 0.9}
+        // height={
+        //   Math.min(window.innerHeight,
+        //     window.innerWidth * 0.9 * game.worldSize.height / game.worldSize.width,
+        //   )}
       />
       {selectionCard}
     </div>
   );
-}
-
-function registerHotkeys(dispatch) {
-  dispatch({
-    type: 'SET_HOTKEY', press: 'onKeyDown',
-    key: 'space',
-    fn: (s) => {
-      const game = s.getState().game;
-      if (game.policy == null) {
-        s.dispatch({type: 'TICK'});
-      }
-    }
-  });
 }
 
 module.exports = Game;

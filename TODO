@@ -1,21 +1,34 @@
+  - lobby
+    - fix finished games not clearing
+    - should be scrollable
+    - weird kind of deep copy with session config
+      - (it says previous settings but is default still)
+      - infinite recursion of some sort
+
+  - game readiness
+    - ready state should do something
+    - can't join games in progress or ended
+
+  - menu of carrier can disappear?
+
 
   - fighting:
     - remove target if you can't see it
 
 
   - additional features:
-    - loss condition for planes lost as well
+    - loss/stalemate condition for planes lost as well
+    - try out rollback netcode
+
+
+  - maybe features
     - carriers can fight back against planes
     - planes have to refit before they can launch again
     - islands that block carrier vision and movement
 
 
-  - quality of life:
-    - better canvas sizing
-    - allow mousing outside the canvas
-
-
   - update multiplayer template:
+    - remove hotkey registering from templates
     - something is broken about postVisit (not detecting unique)
     - copy over lobby again
     - copy over server/sessions.js and socket.js

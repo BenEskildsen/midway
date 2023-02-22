@@ -14,7 +14,9 @@ const {
   RadioPicker,
   Modal,
   Indicator,
-  useMouseHandler
+  useMouseHandler,
+  useHotKeyHandler,
+  useEnhancedReducer
 } = require('bens_ui_components');
 const {
   dispatchToServer
@@ -28,6 +30,12 @@ const {
   useEffect,
   useReducer
 } = React;
+const normalizePos = (pos, worldSize, canvasSize) => {
+  return {
+    x: pos.x * worldSize.width / canvasSize.width,
+    y: pos.y * worldSize.height / canvasSize.height
+  };
+};
 function Game(props) {
   const {
     state,
@@ -51,7 +59,8 @@ function Game(props) {
     dispatch,
     getState
   }, {
-    leftDown: (state, dispatch, pos) => {
+    leftDown: (state, dispatch, p) => {
+      const pos = normalizePos(p, state.game.worldSize, state.game.canvasSize);
       dispatch({
         type: 'SET',
         marquee: {
@@ -61,8 +70,9 @@ function Game(props) {
         }
       });
     },
-    mouseMove: (state, dispatch, pos) => {
+    mouseMove: (state, dispatch, p) => {
       var _state$mouse;
+      const pos = normalizePos(p, state.game.worldSize, state.game.canvasSize);
       if (!(state !== null && state !== void 0 && (_state$mouse = state.mouse) !== null && _state$mouse !== void 0 && _state$mouse.isLeftDown)) return;
       dispatch({
         type: 'SET',
@@ -73,7 +83,8 @@ function Game(props) {
         }
       });
     },
-    leftUp: (state, dispatch, pos) => {
+    leftUp: (state, dispatch, p) => {
+      const pos = normalizePos(p, state.game.worldSize, state.game.canvasSize);
       let square = {
         ...state.game.marquee
       };
@@ -94,7 +105,8 @@ function Game(props) {
         marquee: null
       });
     },
-    rightDown: (state, dispatch, pos) => {
+    rightDown: (state, dispatch, p) => {
+      const pos = normalizePos(p, state.game.worldSize, state.game.canvasSize);
       for (const entityID of state.game.selectedIDs) {
         const entity = state.game.entities[entityID];
         if (entity.type == 'CARRIER' && state.game.clickMode == 'LAUNCH') {
@@ -114,6 +126,55 @@ function Game(props) {
       }
     }
   });
+
+  // hotKeys
+  useHotKeyHandler({
+    dispatch,
+    getState: () => getState().game.hotKeys
+  });
+  useEffect(() => {
+    dispatch({
+      type: 'SET_HOTKEY',
+      key: 'F',
+      press: 'onKeyDown',
+      fn: () => {
+        dispatch({
+          type: 'SET',
+          launchType: 'FIGHTER'
+        });
+        dispatch({
+          type: 'SET',
+          clickMode: 'LAUNCH'
+        });
+      }
+    });
+    dispatch({
+      type: 'SET_HOTKEY',
+      key: 'B',
+      press: 'onKeyDown',
+      fn: () => {
+        dispatch({
+          type: 'SET',
+          launchType: 'BOMBER'
+        });
+        dispatch({
+          type: 'SET',
+          clickMode: 'LAUNCH'
+        });
+      }
+    });
+    dispatch({
+      type: 'SET_HOTKEY',
+      key: 'M',
+      press: 'onKeyDown',
+      fn: () => {
+        dispatch({
+          type: 'SET',
+          clickMode: 'MOVE'
+        });
+      }
+    });
+  }, []);
 
   // selectionCard
   let selectionCard = null;
@@ -156,7 +217,8 @@ function Game(props) {
         border: '1px solid black',
         padding: 8,
         margin: 4,
-        minWidth: 150
+        minWidth: 150,
+        backgroundColor: 'white'
       }
     }, selectionContent);
   }
@@ -169,24 +231,23 @@ function Game(props) {
       justifyContent: 'center'
     }
   }, /*#__PURE__*/React.createElement(Canvas, {
-    width: game.worldSize.width,
-    height: game.worldSize.height
-  }), selectionCard);
-}
-function registerHotkeys(dispatch) {
-  dispatch({
-    type: 'SET_HOTKEY',
-    press: 'onKeyDown',
-    key: 'space',
-    fn: s => {
-      const game = s.getState().game;
-      if (game.policy == null) {
-        s.dispatch({
-          type: 'TICK'
-        });
-      }
+    view: game.worldSize,
+    useFullScreen: true,
+    onResize: (width, height) => {
+      dispatch({
+        type: 'SET',
+        canvasSize: {
+          width,
+          height
+        }
+      });
     }
-  });
+    // width={window.innerWidth * 0.9}
+    // height={
+    //   Math.min(window.innerHeight,
+    //     window.innerWidth * 0.9 * game.worldSize.height / game.worldSize.width,
+    //   )}
+  }), selectionCard);
 }
 module.exports = Game;
 
@@ -824,7 +885,8 @@ const {
 } = require('./modalReducer');
 const GameOverModal = require('../UI/GameOverModal.react');
 const {
-  mouseReducer
+  mouseReducer,
+  hotKeyReducer
 } = require('bens_ui_components');
 const {
   getSession
@@ -986,6 +1048,18 @@ const rootReducer = (state, action) => {
         ...state,
         mouse: mouseReducer(state.mouse, action)
       };
+    case 'SET_HOTKEY':
+    case 'SET_KEY_PRESS':
+      {
+        if (!state.game) return state;
+        return {
+          ...state,
+          game: {
+            ...state.game,
+            hotKeys: hotKeyReducer(state.game.hotKeys, action)
+          }
+        };
+      }
     case 'SET_MODAL':
     case 'DISMISS_MODAL':
       return modalReducer(state, action);
@@ -1019,13 +1093,23 @@ const initGameState = (config, clientID) => {
     worldSize: {
       ...config.worldSize
     },
+    canvasSize: {
+      width: window.innerWidth,
+      height: window.innerHeight
+    },
     entities: {},
     fogLocations: [],
     selectedIDs: [],
     marquee: null,
     clientID,
     clickMode: 'MOVE',
-    launchType: 'FIGHTER'
+    launchType: 'FIGHTER',
+    hotKeys: {
+      onKeyDown: {},
+      onKeyPress: {},
+      onKeyUp: {},
+      keysDown: {}
+    }
   };
   return game;
 };
@@ -4892,6 +4976,10 @@ function Canvas(props) {
     // only necessary if not useFullScreen
     width,
     height,
+    view,
+    // {x, y, width, height} of the world coordinates for the canvas
+    // independent of the canvas element's width/height
+
     style,
     // style overrides
 
@@ -4899,31 +4987,41 @@ function Canvas(props) {
     // optional if you have multiple canvases on the same page
 
     onResize // optional function called when the canvas resizes
-
-    // needed for resizing images on canvas relative to canvas size
-    // cellSize, // size in pixels of grid space
-    // dispatch,
-    // needed for focusing an entity (plus cellSize and dispatch)
-    // focus, // Entity
   } = props;
   const [windowWidth, windowHeight] = useResponsiveDimensions(onResize);
+
+  // maintain canvas context sizing
+  // useEffect(() => {
+  //   const canvas = document.getElementById(id || "canvas");
+  //   if (!canvas) return;
+  //   const ctx = canvas.getContext("2d");
+
+  //   ctx.restore(); // restore from previous resizing
+  //   ctx.save();
+  //   if (view && view.x != null && view.y != null) {
+  //     ctx.translate(view.x, view.y);
+  //   }
+  // }, [width, height, view, useFullScreen, windowWidth, windowHeight]);
+
   return /*#__PURE__*/React.createElement("div", {
     id: "canvasWrapper",
     style: {
-      width,
-      height
+      width: useFullScreen ? windowWidth : width,
+      height: useFullScreen ? windowHeight : height
     }
   }, /*#__PURE__*/React.createElement("canvas", {
     id: id || "canvas",
     style: {
       cursor: 'pointer',
+      width: useFullScreen ? windowWidth : width,
+      height: useFullScreen ? windowHeight : height,
       ...(style ? style : {})
     },
-    width: useFullScreen ? windowWidth : width,
-    height: useFullScreen ? windowHeight : height
+    width: view.width ? view.width : width,
+    height: view.height ? view.height : height
   }));
 }
-module.exports = React.memo(Canvas);
+module.exports = Canvas;
 },{"./hooks":77,"react":96}],61:[function(require,module,exports){
 const React = require('react');
 
@@ -4953,7 +5051,7 @@ function Checkbox(props) {
       style: {
         display: 'inline-block'
       }
-    }, label, checkbox);
+    }, checkbox, label);
   }
 }
 module.exports = Checkbox;
@@ -5210,8 +5308,10 @@ const DragArea = props => {
           x,
           y
         };
+      } else {
+        // only care about the mouse offset when we're not snapping
+        dropPosition = subtract(dropPosition, state.selectedOffset);
       }
-      dropPosition = subtract(dropPosition, state.selectedOffset);
       if (props.isDropAllowed && !props.isDropAllowed(state.selectedID, dropPosition)) {
         dispatch({
           type: 'SET_DRAGGABLE',
@@ -6344,6 +6444,155 @@ const useResponsiveDimensions = onResize => {
 };
 
 // --------------------------------------------------------------------
+// UseHotkeyHandler
+// --------------------------------------------------------------------
+
+// NOTE:
+// type PseudoStore = {dispatch: (action) => void, getState: () => HotKeys}
+// Use Like:
+// const [hotKeys, hotKeyDispatch, getHotKeyState] = useEnhancedReducer(hotKeyReducer);
+// useHotKeyHandler({dispatch: hotKeyDispatch, getState: getHotKeyState});
+// useEffect(() => {
+//    hotKeyDispatch({type: 'SET_HOTKEY', key: 'space', press: 'onKeyDown', fn: (state, dispatch) => {
+//      doSomething();
+//    }});
+// }, []);
+const useHotKeyHandler = (pseudoStore, noWASD, dependencies) => {
+  useEffect(() => {
+    const {
+      dispatch,
+      getState
+    } = pseudoStore;
+    const keyFn = (ev, keyEventType, pressed) => {
+      const state = getState();
+      const dir = getUpDownLeftRight(ev, noWASD);
+      if (dir != null) {
+        if (state && state[keyEventType][dir] != null) {
+          state[keyEventType][dir](getState(), dispatch);
+        }
+        dispatch({
+          type: 'SET_KEY_PRESS',
+          key: dir,
+          pressed
+        });
+        return;
+      }
+      if (ev.keyCode === 13) {
+        if (state && state[keyEventType].enter != null) {
+          state[keyEventType].enter(getState(), dispatch);
+        }
+        dispatch({
+          type: 'SET_KEY_PRESS',
+          key: 'enter',
+          pressed
+        });
+        return;
+      }
+      if (ev.keyCode === 32) {
+        if (state && state[keyEventType].space != null) {
+          state[keyEventType].space(getState(), dispatch);
+        }
+        dispatch({
+          type: 'SET_KEY_PRESS',
+          key: 'space',
+          pressed
+        });
+        return;
+      }
+      const character = String.fromCharCode(ev.keyCode).toUpperCase();
+      if (character != null) {
+        if (state && state[keyEventType][character] != null) {
+          state[keyEventType][character](getState(), dispatch);
+        }
+        dispatch({
+          type: 'SET_KEY_PRESS',
+          key: character,
+          pressed
+        });
+      }
+    };
+
+    // keypress event handling
+    document.onkeydown = ev => {
+      keyFn(ev, "onKeyDown", true);
+    };
+    document.onkeypress = ev => {
+      keyFn(ev, "onKeyPress", true);
+    };
+    document.onkeyup = ev => {
+      keyFn(ev, "onKeyUp", false);
+    };
+  }, dependencies ?? []);
+};
+const hotKeyReducer = (hotKeys, action) => {
+  if (hotKeys === undefined) {
+    hotKeys = {
+      onKeyDown: {},
+      onKeyPress: {},
+      onKeyUp: {},
+      keysDown: {}
+    };
+  }
+  switch (action.type) {
+    case 'SET_KEY_PRESS':
+      {
+        const {
+          key,
+          pressed,
+          once
+        } = action;
+        hotKeys.keysDown[key] = pressed;
+        if (once == true) {
+          hotKeys.once = true;
+        }
+        return hotKeys;
+      }
+    case 'SET_HOTKEY':
+      {
+        const {
+          key,
+          press,
+          fn
+        } = action;
+        hotKeys[press][key] = fn;
+        return hotKeys;
+      }
+  }
+  return hotKeys;
+};
+const getUpDownLeftRight = (ev, noWASD) => {
+  const keyCode = ev.keyCode;
+  if (noWASD) {
+    if (keyCode === 38) {
+      return 'down';
+    }
+    if (keyCode === 40) {
+      return 'up';
+    }
+    if (keyCode === 37) {
+      return 'left';
+    }
+    if (keyCode === 39) {
+      return 'right';
+    }
+    return null;
+  }
+  if (keyCode === 87 || keyCode === 38 || keyCode === 119) {
+    return 'down';
+  }
+  if (keyCode === 83 || keyCode === 40 || keyCode === 115) {
+    return 'up';
+  }
+  if (keyCode === 65 || keyCode === 37 || keyCode === 97) {
+    return 'left';
+  }
+  if (keyCode === 68 || keyCode === 39 || keyCode === 100) {
+    return 'right';
+  }
+  return null;
+};
+
+// --------------------------------------------------------------------
 // UseMouseHandler
 // --------------------------------------------------------------------
 // NOTE:
@@ -6611,6 +6860,8 @@ module.exports = {
   useEnhancedReducer,
   useMouseHandler,
   mouseReducer,
+  useHotKeyHandler,
+  hotKeyReducer,
   useResponsiveDimensions,
   useEnhancedEffect,
   useCompare,

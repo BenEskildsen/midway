@@ -2,7 +2,7 @@ const React = require('react');
 const {gameReducer} = require('./gameReducer');
 const {modalReducer} = require('./modalReducer');
 const GameOverModal = require('../UI/GameOverModal.react');
-const {mouseReducer} = require('bens_ui_components');
+const {mouseReducer, hotKeyReducer} = require('bens_ui_components');
 const {getSession} = require('../selectors/sessions');
 const {config} = require('../config');
 const {deepCopy} = require('bens_utils').helpers;
@@ -105,7 +105,17 @@ const rootReducer = (state, action) => {
         ...state,
         mouse: mouseReducer(state.mouse, action),
       };
-
+    case 'SET_HOTKEY':
+    case 'SET_KEY_PRESS': {
+      if (!state.game) return state;
+      return {
+        ...state,
+        game: {
+          ...state.game,
+          hotKeys: hotKeyReducer(state.game.hotKeys, action),
+        }
+      }
+    }
     case 'SET_MODAL':
     case 'DISMISS_MODAL':
       return modalReducer(state, action);
@@ -138,6 +148,7 @@ const initState = () => {
 const initGameState = (config, clientID) => {
   const game = {
     worldSize: {...config.worldSize},
+    canvasSize: {width: window.innerWidth, height: window.innerHeight},
     entities: {},
     fogLocations: [],
     selectedIDs: [],
@@ -145,6 +156,13 @@ const initGameState = (config, clientID) => {
     clientID,
     clickMode: 'MOVE',
     launchType: 'FIGHTER',
+
+    hotKeys: {
+      onKeyDown: {},
+      onKeyPress: {},
+      onKeyUp: {},
+      keysDown: {},
+    },
   };
 
   return game;
