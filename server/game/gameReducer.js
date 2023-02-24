@@ -33,7 +33,7 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
       break;
     }
     case 'START': {
-      console.log("Start");
+      console.log("Start", session.id);
       session.game = {
         ...initGameState(session.clients, session.config),
         prevTickTime: new Date().getTime(),

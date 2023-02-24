@@ -1,15 +1,7 @@
-  - lobby
-    - fix finished games not clearing
-    - should be scrollable
-    - weird kind of deep copy with session config
-      - (it says previous settings but is default still)
-      - infinite recursion of some sort
 
-  - game readiness
-    - ready state should do something
-    - can't join games in progress or ended
-
-  - menu of carrier can disappear?
+  - bugs:
+    - menu of carrier can disappear?
+    - fix finished games not clearing sometimes
 
 
   - fighting:
@@ -28,9 +20,7 @@
 
 
   - update multiplayer template:
-    - remove hotkey registering from templates
     - something is broken about postVisit (not detecting unique)
     - copy over lobby again
     - copy over server/sessions.js and socket.js
     - wrap server stuff in try/catch
-    - template needs to do the sed command on the config and postVisit as well

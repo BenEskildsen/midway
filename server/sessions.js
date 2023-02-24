@@ -61,6 +61,9 @@ const sessionReducer = (state, action, clientID, socket, newSession) => {
       emitToAllClients(socketClients,
         {...action, session, clientID}, clientID, true /* includeSelf */
       );
+      // tell the client that just hosted what the settings are:
+      // This is needed to prevent weird settings bugs when going from one game to the next
+      socket.emit('receiveAction', {type: 'EDIT_SESSION_PARAMS', ...session.config});
       break;
     }
     case 'JOIN_SESSION': {
@@ -86,6 +89,27 @@ const sessionReducer = (state, action, clientID, socket, newSession) => {
     case 'END_SESSION': {
       const {sessionID} = action;
       endSession(state, clientID, sessionID);
+      break;
+    }
+    case 'READY': {
+      // NOTE: only works for 2 player
+      const session = sessions[clientToSession[clientID]];
+      session.ready = true;
+      emitToAllClients(socketClients,
+        {type: 'UPDATE_SESSION', session: {...session, ready: true}},
+        clientID, true /* includeSelf */
+      );
+      break;
+    }
+    case 'START': {
+      // NOTE: this only handles the session aspect of starting a game, but doesn't
+      // handle actually starting the game, that should happen in the gameReducer
+      const session = sessions[clientToSession[clientID]];
+      session.started = true;
+      emitToAllClients(socketClients,
+        {type: 'UPDATE_SESSION', session: {...session, started: true}},
+        clientID, true /* includeSelf */
+      );
       break;
     }
   }

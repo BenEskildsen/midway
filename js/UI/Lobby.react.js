@@ -45,6 +45,7 @@ const CreateGameCard = (props) => {
     <InfoCard
       style={{
         width: 300,
+        marginLeft: 0,
       }}
     >
       Game Name:&nbsp;
@@ -55,7 +56,7 @@ const CreateGameCard = (props) => {
       <Button
         label="Create Game"
         style={{
-          width: 300,
+          width: '100%',
           height: 30,
           marginTop: 8,
         }}
@@ -74,6 +75,7 @@ const SessionCard = (props) => {
     <InfoCard
       style={{
         width: 300,
+        marginLeft: 0,
       }}
     >
       <div style={{textAlign: 'center'}}><b>{name}</b></div>
@@ -84,24 +86,30 @@ const SessionCard = (props) => {
       {joinedSessionID == id ? (
         <Button
           style={{
-            width: 300,
+            width: '100%',
             height: 30,
           }}
           disabled={clients.length < 2}
-          label={"Ready"}
+          label={isHost(props.state) ? "Start" : "Ready"}
+          disabled={
+            (isHost(props.state) && !session.ready) ||
+            (!isHost(props.state) && session.ready)
+          }
           onClick={() => {
             if (isHost(props.state)) {
               dispatchToServer({type: 'START'});
+            } else {
+              dispatchToServer({type: 'READY'});
             }
           }}
         />
       ) : (
         <Button
           style={{
-            width: 300,
+            width: '100%',
             height: 30,
           }}
-          disabled={clients.length >= 2}
+          disabled={clients.length >= 2 || session.started}
           label={"Join Game"}
           onClick={() => {
             dispatchToServer({type: 'JOIN_SESSION', sessionID: id});
@@ -119,6 +127,7 @@ const Settings = (props) => {
     <div>
       Starting Fighters:
       <Slider value={state.config.startingFighters} min={1} max={100}
+        noOriginalValue={true}
         onChange={(startingFighters) => {
           dispatch({type: 'EDIT_SESSION_PARAMS', startingFighters});
           dispatchToServer({type: 'EDIT_SESSION_PARAMS', startingFighters});
@@ -127,6 +136,7 @@ const Settings = (props) => {
       <div></div>
       Starting Bombers:
       <Slider value={state.config.startingBombers} min={1} max={100}
+        noOriginalValue={true}
         onChange={(startingBombers) => {
           dispatch({type: 'EDIT_SESSION_PARAMS', startingBombers});
           dispatchToServer({type: 'EDIT_SESSION_PARAMS', startingBombers});
@@ -139,6 +149,7 @@ const Settings = (props) => {
       <div>
         Total Starting Planes:
         <Slider value={state.config.totalNumPlanes} min={10} max={200}
+          noOriginalValue={true}
           onChange={(totalNumPlanes) => {
             dispatch({type: 'EDIT_SESSION_PARAMS', totalNumPlanes});
             dispatchToServer({type: 'EDIT_SESSION_PARAMS', totalNumPlanes});
@@ -153,6 +164,7 @@ const Settings = (props) => {
       <div><b>Settings:</b></div>
       Game ms per tick:
       <Slider value={state.config.msPerTick} min={1} max={1000}
+        noOriginalValue={true}
         onChange={(msPerTick) => {
           dispatch({type: 'EDIT_SESSION_PARAMS', msPerTick});
           dispatchToServer({type: 'EDIT_SESSION_PARAMS', msPerTick});
@@ -161,6 +173,7 @@ const Settings = (props) => {
       <div></div>
       Map Width:
       <Slider value={state.config.worldSize.width} min={100} max={1500}
+        noOriginalValue={true}
         onChange={(width) => {
           dispatch({type: 'EDIT_SESSION_PARAMS', worldSize: {...state.config.worldSize, width}});
           dispatchToServer({type: 'EDIT_SESSION_PARAMS', worldSize: {...state.config.worldSize, width}});
@@ -169,6 +182,7 @@ const Settings = (props) => {
       <div></div>
       Map Height:
       <Slider value={state.config.worldSize.height} min={100} max={800}
+        noOriginalValue={true}
         onChange={(height) => {
           dispatch({type: 'EDIT_SESSION_PARAMS', worldSize: {...state.config.worldSize, height}});
           dispatchToServer({type: 'EDIT_SESSION_PARAMS', worldSize: {...state.config.worldSize, height}});
@@ -177,6 +191,7 @@ const Settings = (props) => {
       <div></div>
       Carriers per player:
       <Slider value={state.config.numCarriers} min={1} max={5}
+        noOriginalValue={true}
         onChange={(numCarriers) => {
           dispatch({type: 'EDIT_SESSION_PARAMS', numCarriers});
           dispatchToServer({type: 'EDIT_SESSION_PARAMS', numCarriers});

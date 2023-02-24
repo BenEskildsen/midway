@@ -49,8 +49,16 @@ const initIO = (io, newSession, gameReducer) => {
     // on client connect
     socketClients[clientID] = socket;
     socket.emit('receiveAction', {clientID}); // NOTE: must use enhancedReducer
-    // tell the client what sessions exist
-    socket.emit('receiveAction', {sessions});
+    // tell the client what sessions exist but remove game info from running sessions
+    let sessionsToSend = {};
+    for (const id in sessions) {
+      sessionsToSend[id] = {};
+      for (const prop in sessions[id]) {
+        if (prop == 'game') continue;
+        sessionsToSend[id][prop] = sessions[id][prop];
+      }
+    }
+    socket.emit('receiveAction', {sessions: sessionsToSend});
 
     // needed for ticking
     function dispatch(action) {
@@ -67,7 +75,11 @@ const initIO = (io, newSession, gameReducer) => {
         case 'JOIN_SESSION':
         case 'LEAVE_SESSION':
         case 'END_SESSION':
+        case 'READY':
           return sessionReducer(state, action, clientID, socket, newSession);
+        case 'START':
+          sessionReducer(state, action, clientID, socket, newSession);
+          // fall through
         default:
           return gameReducer(state, action, clientID, socket, dispatch);
       }

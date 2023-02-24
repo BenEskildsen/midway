@@ -392,7 +392,8 @@ const CreateGameCard = props => {
   const [name, setName] = useState('');
   return /*#__PURE__*/React.createElement(InfoCard, {
     style: {
-      width: 300
+      width: 300,
+      marginLeft: 0
     }
   }, "Game Name:\xA0", /*#__PURE__*/React.createElement(TextField, {
     value: name,
@@ -400,7 +401,7 @@ const CreateGameCard = props => {
   }), /*#__PURE__*/React.createElement(Button, {
     label: "Create Game",
     style: {
-      width: 300,
+      width: '100%',
       height: 30,
       marginTop: 8
     },
@@ -425,7 +426,8 @@ const SessionCard = props => {
   } = session;
   return /*#__PURE__*/React.createElement(InfoCard, {
     style: {
-      width: 300
+      width: 300,
+      marginLeft: 0
     }
   }, /*#__PURE__*/React.createElement("div", {
     style: {
@@ -433,24 +435,29 @@ const SessionCard = props => {
     }
   }, /*#__PURE__*/React.createElement("b", null, name)), "Players: ", clients.length, joinedSessionID == id ? /*#__PURE__*/React.createElement(Settings, props) : null, joinedSessionID == id ? /*#__PURE__*/React.createElement(Button, {
     style: {
-      width: 300,
+      width: '100%',
       height: 30
     },
     disabled: clients.length < 2,
-    label: "Ready",
+    label: isHost(props.state) ? "Start" : "Ready",
+    disabled: isHost(props.state) && !session.ready || !isHost(props.state) && session.ready,
     onClick: () => {
       if (isHost(props.state)) {
         dispatchToServer({
           type: 'START'
         });
+      } else {
+        dispatchToServer({
+          type: 'READY'
+        });
       }
     }
   }) : /*#__PURE__*/React.createElement(Button, {
     style: {
-      width: 300,
+      width: '100%',
       height: 30
     },
-    disabled: clients.length >= 2,
+    disabled: clients.length >= 2 || session.started,
     label: "Join Game",
     onClick: () => {
       dispatchToServer({
@@ -470,6 +477,7 @@ const Settings = props => {
     value: state.config.startingFighters,
     min: 1,
     max: 100,
+    noOriginalValue: true,
     onChange: startingFighters => {
       dispatch({
         type: 'EDIT_SESSION_PARAMS',
@@ -484,6 +492,7 @@ const Settings = props => {
     value: state.config.startingBombers,
     min: 1,
     max: 100,
+    noOriginalValue: true,
     onChange: startingBombers => {
       dispatch({
         type: 'EDIT_SESSION_PARAMS',
@@ -500,6 +509,7 @@ const Settings = props => {
       value: state.config.totalNumPlanes,
       min: 10,
       max: 200,
+      noOriginalValue: true,
       onChange: totalNumPlanes => {
         dispatch({
           type: 'EDIT_SESSION_PARAMS',
@@ -516,6 +526,7 @@ const Settings = props => {
     value: state.config.msPerTick,
     min: 1,
     max: 1000,
+    noOriginalValue: true,
     onChange: msPerTick => {
       dispatch({
         type: 'EDIT_SESSION_PARAMS',
@@ -530,6 +541,7 @@ const Settings = props => {
     value: state.config.worldSize.width,
     min: 100,
     max: 1500,
+    noOriginalValue: true,
     onChange: width => {
       dispatch({
         type: 'EDIT_SESSION_PARAMS',
@@ -550,6 +562,7 @@ const Settings = props => {
     value: state.config.worldSize.height,
     min: 100,
     max: 800,
+    noOriginalValue: true,
     onChange: height => {
       dispatch({
         type: 'EDIT_SESSION_PARAMS',
@@ -570,6 +583,7 @@ const Settings = props => {
     value: state.config.numCarriers,
     min: 1,
     max: 5,
+    noOriginalValue: true,
     onChange: numCarriers => {
       dispatch({
         type: 'EDIT_SESSION_PARAMS',
@@ -664,7 +678,7 @@ const setupSocket = dispatch => {
     path: config.path
   });
   socket.on('receiveAction', action => {
-    // console.log("received", action);
+    console.log("received", action);
     dispatch(action);
   });
   return socket;
