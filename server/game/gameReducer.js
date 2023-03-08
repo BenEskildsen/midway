@@ -60,6 +60,7 @@ const gameReducer = (state, action, clientID, socket, dispatch) => {
     case 'LAUNCH_PLANE': {
       const {planeType, carrierID, targetPos} = action;
       const carrier = game.entities[carrierID];
+      if (!carrier) break;
 
       // check that this plane is launchable
       if (carrier.planes[planeType] <= 0) break;

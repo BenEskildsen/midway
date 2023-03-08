@@ -678,7 +678,7 @@ const setupSocket = dispatch => {
     path: config.path
   });
   socket.on('receiveAction', action => {
-    console.log("received", action);
+    // console.log("received", action);
     dispatch(action);
   });
   return socket;
@@ -696,7 +696,7 @@ module.exports = {
   setupSocket
 };
 },{"./config":6}],6:[function(require,module,exports){
-const isLocalHost = true;
+const isLocalHost = false;
 const config = {
   isLocalHost,
   URL: isLocalHost ? null : "https://benhub.io",
